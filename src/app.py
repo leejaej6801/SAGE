@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import plotly.express as px
 
 # Load data
 @st.cache_data
@@ -35,7 +34,7 @@ if page == "Welcome":
 
 # County Explorer Page
 elif page == "County Explorer":
-    st.title("📊 Explore County Vulnerability & Aging Data")
+    st.title("Explore County Vulnerability and Aging Data")
 
     # Filters
     selected_state = st.selectbox("Select a State", sorted(df["State"].unique()))
@@ -45,7 +44,7 @@ elif page == "County Explorer":
     selected_row = filtered_df[filtered_df["County"] == selected_county].iloc[0]
 
     # Display metrics
-    st.markdown(f"### 📍 {selected_county}, {selected_row['State']}")
+    st.markdown(f"### {selected_county}, {selected_row['State']}")
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("SVI", f"{selected_row['SVI']:.2f}")
     col2.metric("Over 65 (%)", f"{selected_row['PopulationOver65']:.1f}%")
@@ -55,41 +54,23 @@ elif page == "County Explorer":
     # Recommendation logic
     def recommend(row):
         if row["SVI"] > 0.75 and row["InfrastructureScore"] < 0.5:
-            return "🚨 High Priority – Consider Immediate Investment"
+            return "High Priority – Consider Immediate Investment"
         elif row["SVI"] > 0.5:
-            return "⚠️ Moderate Priority – Monitor and Prepare"
+            return "Moderate Priority – Monitor and Prepare"
         else:
-            return "✅ Stable – Maintain Current Support"
+            return "Stable – Maintain Current Support"
 
     st.markdown("### Recommendation")
     st.success(recommend(selected_row))
 
     # Ranking Table
-    st.markdown("### 🧭 Top 10 Counties by Vulnerability (within selected state)")
+    st.markdown("### Top 10 Counties by Vulnerability (within selected state)")
     top_10 = filtered_df.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
     st.dataframe(top_10[["County", "SVI", "PopulationOver65", "ElderVulnerabilityIndex"]].reset_index(drop=True))
 
-    # U.S. map visualization (SVI choropleth)
-    st.markdown("### 🗺️ Nationwide County Map by Social Vulnerability")
-    map_df = df.copy()
-    map_df["County_Label"] = map_df["County"] + ", " + map_df["State"]
-
-    fig = px.choropleth(
-        map_df,
-        geojson="https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json",
-        locations=map_df["FIPS"].astype(str).str.zfill(5),
-        color="SVI",
-        color_continuous_scale="YlGnBu",
-        scope="usa",
-        labels={"SVI": "Social Vulnerability"},
-        hover_name="County_Label",
-    )
-    fig.update_geos(fitbounds="locations", visible=False)
-    st.plotly_chart(fig, use_container_width=True)
-
 # Placeholder for future simulation tool
 elif page == "Simulation Tool (Coming Soon)":
-    st.title("🧠 Decision Simulation Tool")
+    st.title("Decision Simulation Tool")
     st.info("This module will allow you to test investment scenarios and forecast the efficiency of resource allocation.")
 
     st.markdown("""
@@ -104,5 +85,6 @@ elif page == "Simulation Tool (Coming Soon)":
     - Proposed budget increase (% or $ per capita)
     - Resulting predicted satisfaction score
 
-    The goal: simulate how much gain in satisfaction can be achieved **per unit of investment** in different counties — helping identify the most efficient allocations.
+    The goal: simulate how much gain in satisfaction can be achieved per unit of investment in different counties — helping identify the most efficient allocations.
     """)
+
