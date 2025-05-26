@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import geopandas as gpd
 import plotly.express as px
 
 # Load data
@@ -74,7 +73,7 @@ elif page == "County Explorer":
     st.markdown("### 🗺️ Nationwide County Map by Social Vulnerability")
     map_df = df.copy()
     map_df["County_Label"] = map_df["County"] + ", " + map_df["State"]
-    
+
     fig = px.choropleth(
         map_df,
         geojson="https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json",
@@ -107,4 +106,3 @@ elif page == "Simulation Tool (Coming Soon)":
 
     The goal: simulate how much gain in satisfaction can be achieved **per unit of investment** in different counties — helping identify the most efficient allocations.
     """)
-
