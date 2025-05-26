@@ -76,13 +76,29 @@ elif page == "National Summary":
     state_avg = df.groupby("State")["ElderVulnerabilityIndex"].mean().sort_values(ascending=False).head(10)
     st.dataframe(state_avg.reset_index().rename(columns={"ElderVulnerabilityIndex": "Avg Elder Vulnerability Index"}))
 
-    st.markdown("#### Ideas for Further Analysis")
+    st.markdown("#### Visualization: Statewide Average Vulnerability")
+    fig, ax = plt.subplots(figsize=(10, 5))
+    state_avg.sort_values().plot(kind='barh', ax=ax, color='gray')
+    ax.set_xlabel("Average Elder Vulnerability Index")
+    ax.set_ylabel("State")
+    ax.set_title("Average Elder Vulnerability Index by State")
+    st.pyplot(fig)
+
+    st.markdown("#### Scatter Plot: SVI vs Satisfaction")
+    fig2, ax2 = plt.subplots()
+    ax2.scatter(df["SVI"], df["ElderSatisfaction"], alpha=0.5)
+    ax2.set_xlabel("SVI")
+    ax2.set_ylabel("Elder Satisfaction")
+    ax2.set_title("SVI vs. Elder Satisfaction")
+    st.pyplot(fig2)
+
+    st.markdown("#### Insights and Ideas for Further Analysis")
     st.markdown("""
     - Identify geographic clusters of high vulnerability
     - Highlight states with high variability (some counties low, others extremely high)
     - Compare average SVI to average infrastructure score per state
     - Flag counties with high elder population but low infrastructure scores as under-resourced
-    - Visualize vulnerability vs satisfaction to identify underperformers
+    - Visualize vulnerability vs satisfaction to identify underperformers and potential improvement targets
     """)
 
 # Simulation Tool Placeholder
