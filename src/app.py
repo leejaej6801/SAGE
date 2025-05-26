@@ -2,10 +2,9 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Load data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("data/eldercare_regions_enriched.csv")
+    df = pd.read_csv("data/Eldercare_Regional_Dataset.csv")
     df["ElderVulnerabilityIndex"] = df["SVI"] * (df["PopulationOver65"] / 100)
     return df
 
