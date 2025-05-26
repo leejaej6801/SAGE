@@ -12,7 +12,7 @@ def load_data():
 df = load_data()
 
 # Page navigation
-page = st.sidebar.radio("Navigate", ["Welcome", "County Explorer", "Simulation Tool (Coming Soon)"])
+page = st.sidebar.radio("Navigate", ["Welcome", "County Explorer", "National Summary", "Simulation Tool (Coming Soon)"])
 
 # Welcome Page
 if page == "Welcome":
@@ -36,14 +36,12 @@ if page == "Welcome":
 elif page == "County Explorer":
     st.title("Explore County Vulnerability and Aging Data")
 
-    # Filters
     selected_state = st.selectbox("Select a State", sorted(df["State"].unique()))
     filtered_df = df[df["State"] == selected_state]
 
     selected_county = st.selectbox("Select a County", filtered_df["County"])
     selected_row = filtered_df[filtered_df["County"] == selected_county].iloc[0]
 
-    # Display metrics
     st.markdown(f"### {selected_county}, {selected_row['State']}")
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("SVI", f"{selected_row['SVI']:.2f}")
@@ -51,7 +49,6 @@ elif page == "County Explorer":
     col3.metric("Infrastructure", f"{selected_row['InfrastructureScore']:.2f}")
     col4.metric("Satisfaction", f"{selected_row['ElderSatisfaction']:.2f}")
 
-    # Recommendation logic
     def recommend(row):
         if row["SVI"] > 0.75 and row["InfrastructureScore"] < 0.5:
             return "High Priority – Consider Immediate Investment"
@@ -63,12 +60,32 @@ elif page == "County Explorer":
     st.markdown("### Recommendation")
     st.success(recommend(selected_row))
 
-    # Ranking Table
     st.markdown("### Top 10 Counties by Vulnerability (within selected state)")
     top_10 = filtered_df.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
     st.dataframe(top_10[["County", "SVI", "PopulationOver65", "ElderVulnerabilityIndex"]].reset_index(drop=True))
 
-# Placeholder for future simulation tool
+# National Summary Page
+elif page == "National Summary":
+    st.title("National Summary of Eldercare Vulnerability")
+
+    st.markdown("#### Top 10 Most Vulnerable Counties (Nationwide)")
+    top_counties = df.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
+    st.dataframe(top_counties[["County", "State", "SVI", "PopulationOver65", "ElderVulnerabilityIndex"]].reset_index(drop=True))
+
+    st.markdown("#### Top 10 States by Average Vulnerability")
+    state_avg = df.groupby("State")["ElderVulnerabilityIndex"].mean().sort_values(ascending=False).head(10)
+    st.dataframe(state_avg.reset_index().rename(columns={"ElderVulnerabilityIndex": "Avg Elder Vulnerability Index"}))
+
+    st.markdown("#### Ideas for Further Analysis")
+    st.markdown("""
+    - Identify geographic clusters of high vulnerability
+    - Highlight states with high variability (some counties low, others extremely high)
+    - Compare average SVI to average infrastructure score per state
+    - Flag counties with high elder population but low infrastructure scores as under-resourced
+    - Visualize vulnerability vs satisfaction to identify underperformers
+    """)
+
+# Simulation Tool Placeholder
 elif page == "Simulation Tool (Coming Soon)":
     st.title("Decision Simulation Tool")
     st.info("This module will allow you to test investment scenarios and forecast the efficiency of resource allocation.")
@@ -87,4 +104,3 @@ elif page == "Simulation Tool (Coming Soon)":
 
     The goal: simulate how much gain in satisfaction can be achieved per unit of investment in different counties — helping identify the most efficient allocations.
     """)
-
