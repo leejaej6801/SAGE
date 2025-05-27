@@ -12,7 +12,7 @@ def load_data():
 df = load_data()
 
 # Page navigation
-page = st.sidebar.radio("Navigate", ["National Summary", "Welcome", "County Explorer", "Simulation Tool (Coming Soon)"])
+page = st.sidebar.radio("Navigate", ["Welcome", "National Summary", "County Explorer", "Simulation Tool (Coming Soon)"])
 
 # Welcome Page
 if page == "Welcome":
@@ -111,4 +111,6 @@ elif page == "Simulation Tool (Coming Soon)":
     - Resulting predicted satisfaction score
 
     The goal: simulate how much gain in satisfaction can be achieved per unit of investment in different counties — helping identify the most efficient allocations.
+    """)
+achieved per unit of investment in different counties — helping identify the most efficient allocations.
     """)
