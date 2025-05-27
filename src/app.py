@@ -20,16 +20,16 @@ if page == "Welcome":
     st.subheader("AI-powered tool for equitable eldercare resource allocation")
     st.markdown("""
     Welcome to S.A.G.E., a decision intelligence tool that helps local governments identify and prioritize regions
-    for eldercare investment. This platform integrates social vulnerability data, aging demographics, and predictive
-    modeling to help allocate resources where they will have the greatest impact.
+for eldercare investment. This platform integrates social vulnerability data, aging demographics, and predictive
+modeling to help allocate resources where they will have the greatest impact.
 
-    **Key Decision-Making Factors:**
-    - **SVI (Social Vulnerability Index):** How structurally disadvantaged is the region?
-    - **Population Over 65 (%):** What proportion of the population is elderly?
-    - **Infrastructure Score:** How well-prepared is the region to support eldercare?
-    - **Projected Satisfaction Impact:** What return could we expect on additional investment?
-    
-    Use the sidebar to explore real data and simulate decisions.
+**Key Decision-Making Factors:**
+- **SVI (Social Vulnerability Index):** How structurally disadvantaged is the region? *(Higher is worse)*
+- **Population Over 65 (%):** What proportion of the population is elderly? *(Higher signals greater need)*
+- **Infrastructure Score:** How well-prepared is the region to support eldercare? *(Higher is better)*
+- **Projected Satisfaction Impact:** What return could we expect on additional investment? *(Higher is better)*
+
+Use the sidebar to explore real data and simulate decisions.
     """)
 
 # County Explorer Page
@@ -60,7 +60,7 @@ elif page == "County Explorer":
     st.markdown("### Recommendation")
     st.success(recommend(selected_row))
 
-    st.markdown("### Top 10 Counties by Vulnerability (within selected state)")
+    st.markdown("### Top 10 Counties by Elder Vulnerability Index (Higher = More Vulnerable)")
     top_10 = filtered_df.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
     st.dataframe(top_10[["County", "SVI", "PopulationOver65", "ElderVulnerabilityIndex"]].reset_index(drop=True))
 
@@ -68,11 +68,16 @@ elif page == "County Explorer":
 elif page == "National Summary":
     st.title("National Summary of Eldercare Vulnerability")
 
-    st.markdown("#### Top 10 Most Vulnerable Counties (Nationwide)")
+    st.markdown("#### Top 10 Most Vulnerable Counties Nationwide (Higher = More Urgent Need)")
     top_counties = df.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
     st.dataframe(top_counties[["County", "State", "SVI", "PopulationOver65", "ElderVulnerabilityIndex"]].reset_index(drop=True))
 
-    st.markdown("#### Top 10 States by Average Vulnerability")
+    st.markdown("#### Top 10 High-Priority Counties (SVI > 0.75 and Infrastructure < 0.5)")
+high_priority = df[(df['SVI'] > 0.75) & (df['InfrastructureScore'] < 0.5)]
+top_priority = high_priority.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
+st.dataframe(top_priority[["County", "State", "SVI", "PopulationOver65", "InfrastructureScore", "ElderVulnerabilityIndex"]].reset_index(drop=True).style.apply(lambda x: ['background-color: #ffcccc' if x.name < 3 else '' for _ in x], axis=1))
+
+st.markdown("#### Top 10 States by Average Elder Vulnerability Index (Higher = More Vulnerable)")
     state_avg = df.groupby("State")["ElderVulnerabilityIndex"].mean().sort_values(ascending=False).head(10)
     st.dataframe(state_avg.reset_index().rename(columns={"ElderVulnerabilityIndex": "Avg Elder Vulnerability Index"}))
 
@@ -112,4 +117,5 @@ elif page == "Simulation Tool (Coming Soon)":
 
     The goal: simulate how much gain in satisfaction can be achieved per unit of investment in different counties — helping identify the most efficient allocations.
     """)
+
 
