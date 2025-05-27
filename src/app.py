@@ -11,13 +11,17 @@ def load_data():
 
 df = load_data()
 
+# User persona selector
+user_role = st.sidebar.selectbox("I am a...", ["General User", "County Planner", "State Policy Analyst", "Community Advocate"])
+
 # Page navigation
-page = st.sidebar.radio("Navigate", ["Welcome", "National Summary", "County Explorer", "Simulation Tool (Coming Soon)"])
+page = st.sidebar.radio("Navigate", ["Welcome", "National Summary", "County Explorer", "Simulation Tool (Coming Soon)", "Feedback"])
 
 # Welcome Page
 if page == "Welcome":
     st.title("S.A.G.E. – Sustainable Aging Governance Engine")
     st.subheader("AI-powered tool for equitable eldercare resource allocation")
+    st.markdown(f"**Role selected:** {user_role}")
     st.markdown("""
     Welcome to S.A.G.E., a decision intelligence tool that helps local governments identify and prioritize regions
     for eldercare investment. This platform integrates social vulnerability data, aging demographics, and predictive
@@ -59,6 +63,10 @@ elif page == "County Explorer":
 
     st.markdown("### Recommendation")
     st.success(recommend(selected_row))
+
+    if user_role == "County Planner":
+        st.markdown("#### Narrative Summary")
+        st.markdown(f"{selected_county} County faces moderate eldercare vulnerability with a {selected_row['SVI']:.2f} SVI and {selected_row['InfrastructureScore']:.2f} infrastructure readiness. Recommended priority: **{recommend(selected_row)}**")
 
     st.markdown("### Top 10 Counties by Elder Vulnerability Index (Higher = More Vulnerable)")
     top_10 = filtered_df.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
@@ -119,4 +127,19 @@ elif page == "Simulation Tool (Coming Soon)":
     - Resulting predicted satisfaction score
 
     The goal: simulate how much gain in satisfaction can be achieved per unit of investment in different counties — helping identify the most efficient allocations.
+
+    **Challenge:** Collecting outcome-linked satisfaction data is limited, and building a proxy model with credible assumptions is our current research focus.
     """)
+
+# Feedback Page
+elif page == "Feedback":
+    st.title("We Value Your Feedback")
+    st.markdown("If you’re a local policymaker, health leader, or community advocate — we’d love your thoughts.")
+    with st.form("feedback_form"):
+        name = st.text_input("Your Name")
+        org = st.text_input("Organization")
+        role = st.text_input("Your Role")
+        feedback = st.text_area("What worked well? What could be improved?")
+        submitted = st.form_submit_button("Submit")
+        if submitted:
+            st.success("Thank you! Your feedback has been recorded.")
