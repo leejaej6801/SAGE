@@ -92,11 +92,11 @@ elif page == "National Summary":
     st.dataframe(top_counties[["County", "State", "SVI", "PopulationOver65", "ElderVulnerabilityIndex"]].reset_index(drop=True))
 
     st.markdown("#### Top 10 High-Priority Counties (Based on Composite Ranking of SVI and Age 65%)")
-top_priority = df.sort_values("CompositePriorityScore").head(10)
-styled_df = top_priority[["County", "State", "SVI", "PopulationOver65", "InfrastructureScore", "CompositePriorityScore"]] \
-    .reset_index(drop=True) \
-    .style.apply(lambda x: ['background-color: #ffcccc' if x.name < 3 else '' for _ in x], axis=1)
-st.dataframe(styled_df)
+    top_priority = df.sort_values("CompositePriorityScore").head(10)
+    styled_df = top_priority[["County", "State", "SVI", "PopulationOver65", "InfrastructureScore", "CompositePriorityScore"]] \
+        .reset_index(drop=True) \
+        .style.apply(lambda x: ['background-color: #ffcccc' if x.name < 3 else '' for _ in x], axis=1)
+    st.dataframe(styled_df)
 
     st.markdown("#### Top 10 States by Average Elder Vulnerability Index (Higher = More Vulnerable)")
     state_avg = df.groupby("State")["ElderVulnerabilityIndex"].mean().sort_values(ascending=False).head(10)
@@ -153,4 +153,3 @@ elif page == "Feedback":
         submitted = st.form_submit_button("Submit")
         if submitted:
             st.success("Thank you! Your feedback has been recorded.")
-
