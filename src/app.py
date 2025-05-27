@@ -117,5 +117,3 @@ elif page == "Simulation Tool (Coming Soon)":
 
     The goal: simulate how much gain in satisfaction can be achieved per unit of investment in different counties — helping identify the most efficient allocations.
     """)
-
-
