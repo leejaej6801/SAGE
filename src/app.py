@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 def load_data():
     df = pd.read_csv("data/Eldercare_Regional_Dataset.csv")
     df["SVI_rank"] = df["SVI"].rank(ascending=False)
-df["Age65_rank"] = df["PopulationOver65"].rank(ascending=False)
-df["CompositePriorityScore"] = (df["SVI_rank"] + df["Age65_rank"]) / 2
-df["ElderVulnerabilityIndex"] = df["SVI"] * (df["PopulationOver65"] / 100)
+    df["Age65_rank"] = df["PopulationOver65"].rank(ascending=False)
+    df["CompositePriorityScore"] = (df["SVI_rank"] + df["Age65_rank"]) / 2
+    df["ElderVulnerabilityIndex"] = df["SVI"] * (df["PopulationOver65"] / 100)
     return df
 
 df = load_data()
@@ -153,3 +153,4 @@ elif page == "Feedback":
         submitted = st.form_submit_button("Submit")
         if submitted:
             st.success("Thank you! Your feedback has been recorded.")
+
