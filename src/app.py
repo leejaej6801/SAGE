@@ -20,16 +20,16 @@ if page == "Welcome":
     st.subheader("AI-powered tool for equitable eldercare resource allocation")
     st.markdown("""
     Welcome to S.A.G.E., a decision intelligence tool that helps local governments identify and prioritize regions
-for eldercare investment. This platform integrates social vulnerability data, aging demographics, and predictive
-modeling to help allocate resources where they will have the greatest impact.
+    for eldercare investment. This platform integrates social vulnerability data, aging demographics, and predictive
+    modeling to help allocate resources where they will have the greatest impact.
 
-**Key Decision-Making Factors:**
-- **SVI (Social Vulnerability Index):** How structurally disadvantaged is the region? *(Higher is worse)*
-- **Population Over 65 (%):** What proportion of the population is elderly? *(Higher signals greater need)*
-- **Infrastructure Score:** How well-prepared is the region to support eldercare? *(Higher is better)*
-- **Projected Satisfaction Impact:** What return could we expect on additional investment? *(Higher is better)*
+    **Key Decision-Making Factors:**
+    - **SVI (Social Vulnerability Index):** How structurally disadvantaged is the region? *(Higher is worse)*
+    - **Population Over 65 (%):** What proportion of the population is elderly? *(Higher signals greater need)*
+    - **Infrastructure Score:** How well-prepared is the region to support eldercare? *(Higher is better)*
+    - **Projected Satisfaction Impact:** What return could we expect on additional investment? *(Higher is better)*
 
-Use the sidebar to explore real data and simulate decisions.
+    Use the sidebar to explore real data and simulate decisions.
     """)
 
 # County Explorer Page
@@ -73,15 +73,50 @@ elif page == "National Summary":
     st.dataframe(top_counties[["County", "State", "SVI", "PopulationOver65", "ElderVulnerabilityIndex"]].reset_index(drop=True))
 
     st.markdown("#### Top 10 High-Priority Counties (SVI > 0.75 and Infrastructure < 0.5)")
-    high_priority = df[(df['SVI'] > 0.75) & (df['InfrastructureScore'] < 0.5)]
+    high_priority = df[(df["SVI"] > 0.75) & (df["InfrastructureScore"] < 0.5)]
     top_priority = high_priority.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
-    st.dataframe(top_priority[["County", "State", "SVI", "PopulationOver65", "InfrastructureScore", "ElderVulnerabilityIndex"]]
-                 .reset_index(drop=True)
-                 .style.apply(lambda x: ['background-color: #ffcccc' if x.name < 3 else '' for _ in x], axis=1))")
-high_priority = df[(df['SVI'] > 0.75) & (df['InfrastructureScore'] < 0.5)]
-top_priority = high_priority.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
-st.dataframe(top_priority[["County", "State", "SVI", "PopulationOver65", "InfrastructureScore", "ElderVulnerabilityIndex"]].reset_index(drop=True).style.apply(lambda x: ['background-color: #ffcccc' if x.name < 3 else '' for _ in x], axis=1))
+    styled_df = top_priority[["County", "State", "SVI", "PopulationOver65", "InfrastructureScore", "ElderVulnerabilityIndex"]] \
+        .reset_index(drop=True) \
+        .style.apply(lambda x: ['background-color: #ffcccc' if x.name < 3 else '' for _ in x], axis=1)
+    st.dataframe(styled_df)
 
-st.markdown("#### Top 10 States by Average Elder Vulnerability Index (Higher = More Vulnerable)")
-        state_avg = df.groupby("State")["ElderVulnerabilityIndex"].mean().sort_values(ascending=False).head(10)
+    st.markdown("#### Top 10 States by Average Elder Vulnerability Index (Higher = More Vulnerable)")
+    state_avg = df.groupby("State")["ElderVulnerabilityIndex"].mean().sort_values(ascending=False).head(10)
+    st.dataframe(state_avg.reset_index().rename(columns={"ElderVulnerabilityIndex": "Avg Elder Vulnerability Index"}))
 
+    st.markdown("#### Visualization: Statewide Average Vulnerability")
+    fig, ax = plt.subplots(figsize=(10, 5))
+    state_avg.sort_values().plot(kind='barh', ax=ax, color='gray')
+    ax.set_xlabel("Average Elder Vulnerability Index")
+    ax.set_ylabel("State")
+    ax.set_title("Average Elder Vulnerability Index by State")
+    st.pyplot(fig)
+
+    st.markdown("#### Insights and Ideas for Further Analysis")
+    st.markdown("""
+    - Identify geographic clusters of high vulnerability
+    - Highlight states with high variability (some counties low, others extremely high)
+    - Compare average SVI to average infrastructure score per state
+    - Flag counties with high elder population but low infrastructure scores as under-resourced
+    - Visualize vulnerability vs satisfaction to identify underperformers and potential improvement targets
+    """)
+
+# Simulation Tool Placeholder
+elif page == "Simulation Tool (Coming Soon)":
+    st.title("Decision Simulation Tool")
+    st.info("This module will allow you to test investment scenarios and forecast the efficiency of resource allocation.")
+
+    st.markdown("""
+    ### Preview: Investment Impact Model
+    This tool will estimate the projected improvement in elder satisfaction given a proposed budget increase and existing infrastructure score.
+
+    We'll use a basic regression model trained on historical patterns (e.g., where increased spending led to higher satisfaction outcomes).
+
+    Core variables to include:
+    - Baseline elder satisfaction
+    - Current infrastructure score
+    - Proposed budget increase (% or $ per capita)
+    - Resulting predicted satisfaction score
+
+    The goal: simulate how much gain in satisfaction can be achieved per unit of investment in different counties — helping identify the most efficient allocations.
+    """)
