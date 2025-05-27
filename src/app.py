@@ -6,7 +6,10 @@ import matplotlib.pyplot as plt
 @st.cache_data
 def load_data():
     df = pd.read_csv("data/Eldercare_Regional_Dataset.csv")
-    df["ElderVulnerabilityIndex"] = df["SVI"] * (df["PopulationOver65"] / 100)
+    df["SVI_rank"] = df["SVI"].rank(ascending=False)
+df["Age65_rank"] = df["PopulationOver65"].rank(ascending=False)
+df["CompositePriorityScore"] = (df["SVI_rank"] + df["Age65_rank"]) / 2
+df["ElderVulnerabilityIndex"] = df["SVI"] * (df["PopulationOver65"] / 100)
     return df
 
 df = load_data()
@@ -34,6 +37,14 @@ if page == "Welcome":
     - **Projected Satisfaction Impact:** What return could we expect on additional investment? *(Higher is better)*
 
     Use the sidebar to explore real data and simulate decisions.
+
+**About the Roles:**
+- **County Planners** need localized, budget-justified recommendations.
+- **State Policy Analysts** want cross-county comparisons and infrastructure trends.
+- **Community Advocates** focus on equity gaps and local vulnerability hotspots.
+- **General Users** can explore national data with contextual support.
+
+The app tailors narrative output and indicators based on these personas to make the tool accessible and action-oriented.
     """)
 
 # County Explorer Page
@@ -80,13 +91,12 @@ elif page == "National Summary":
     top_counties = df.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
     st.dataframe(top_counties[["County", "State", "SVI", "PopulationOver65", "ElderVulnerabilityIndex"]].reset_index(drop=True))
 
-    st.markdown("#### Top 10 High-Priority Counties (SVI > 0.75 and Infrastructure < 0.5)")
-    high_priority = df[(df["SVI"] > 0.75) & (df["InfrastructureScore"] < 0.5)]
-    top_priority = high_priority.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
-    styled_df = top_priority[["County", "State", "SVI", "PopulationOver65", "InfrastructureScore", "ElderVulnerabilityIndex"]] \
-        .reset_index(drop=True) \
-        .style.apply(lambda x: ['background-color: #ffcccc' if x.name < 3 else '' for _ in x], axis=1)
-    st.dataframe(styled_df)
+    st.markdown("#### Top 10 High-Priority Counties (Based on Composite Ranking of SVI and Age 65%)")
+top_priority = df.sort_values("CompositePriorityScore").head(10)
+styled_df = top_priority[["County", "State", "SVI", "PopulationOver65", "InfrastructureScore", "CompositePriorityScore"]] \
+    .reset_index(drop=True) \
+    .style.apply(lambda x: ['background-color: #ffcccc' if x.name < 3 else '' for _ in x], axis=1)
+st.dataframe(styled_df)
 
     st.markdown("#### Top 10 States by Average Elder Vulnerability Index (Higher = More Vulnerable)")
     state_avg = df.groupby("State")["ElderVulnerabilityIndex"].mean().sort_values(ascending=False).head(10)
