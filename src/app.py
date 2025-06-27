@@ -1,155 +1,96 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 
-# Load data
+# Load full dataset
 @st.cache_data
 def load_data():
-    df = pd.read_csv("data/Eldercare_Regional_Dataset.csv")
-    df["SVI_rank"] = df["SVI"].rank(ascending=False)
-    df["Age65_rank"] = df["PopulationOver65"].rank(ascending=False)
-    df["CompositePriorityScore"] = (df["SVI_rank"] + df["Age65_rank"]) / 2
-    df["ElderVulnerabilityIndex"] = df["SVI"] * (df["PopulationOver65"] / 100)
+    df = pd.read_csv("data/Eldercare_Tiers_2022_FullCountyCoverage.csv")
+    df["FIPS"] = df["FIPS"].astype(str).str.zfill(5)
+
+    # Simulated current satisfaction (inverse of vulnerability)
+    df["CurrentSatisfaction"] = df["ElderVulnerabilityIndex"].apply(
+        lambda x: round(max(0.1, min(1.0, 1 - x)), 3) if pd.notna(x) else None
+    )
+
     return df
 
 df = load_data()
 
-# User persona selector
-user_role = st.sidebar.selectbox("I am a...", ["General User", "County Planner", "State Policy Analyst", "Community Advocate"])
+# Sidebar filters
+st.sidebar.title("S.A.G.E. Filters")
+selected_states = st.sidebar.multiselect(
+    "Filter by State",
+    sorted(df["State"].unique())
+)
 
-# Page navigation
-page = st.sidebar.radio("Navigate", ["Welcome", "National Summary", "County Explorer", "Simulation Tool (Coming Soon)", "Feedback"])
+selected_tiers = st.sidebar.multiselect(
+    "Filter by Tier",
+    options=["Tier 1: Critical", "Tier 2: High", "Tier 3: Moderate", "Tier 4: Low", "No Data"],
+    default=["Tier 1: Critical", "Tier 2: High", "Tier 3: Moderate", "Tier 4: Low"]
+)
 
-# Welcome Page
-if page == "Welcome":
-    st.title("S.A.G.E. – Sustainable Aging Governance Engine")
-    st.subheader("AI-powered tool for equitable eldercare resource allocation")
-    st.markdown(f"**Role selected:** {user_role}")
-    st.markdown("""
-    Welcome to S.A.G.E., a decision intelligence tool that helps local governments identify and prioritize regions
-    for eldercare investment. This platform integrates social vulnerability data, aging demographics, and predictive
-    modeling to help allocate resources where they will have the greatest impact.
+investment_factor = st.sidebar.slider(
+    "Investment Effectiveness (%)",
+    min_value=0.0, max_value=1.0, value=0.2, step=0.05,
+    help="This controls how much satisfaction increases for higher vulnerability areas."
+)
 
-    **Key Decision-Making Factors:**
-    - **SVI (Social Vulnerability Index):** How structurally disadvantaged is the region? *(Higher is worse)*
-    - **Population Over 65 (%):** What proportion of the population is elderly? *(Higher signals greater need)*
-    - **Infrastructure Score:** How well-prepared is the region to support eldercare? *(Higher is better)*
-    - **Projected Satisfaction Impact:** What return could we expect on additional investment? *(Higher is better)*
+# Apply filters
+filtered = df.copy()
+if selected_states:
+    filtered = filtered[filtered["State"].isin(selected_states)]
+if selected_tiers:
+    filtered = filtered[filtered["Tier"].isin(selected_tiers)]
 
-    Use the sidebar to explore real data and simulate decisions.
+# Calculate projected satisfaction
+filtered["PredictedSatisfaction"] = filtered.apply(
+    lambda row: round(min(1.0, row["CurrentSatisfaction"] + row["ElderVulnerabilityIndex"] * investment_factor), 3)
+    if pd.notna(row["CurrentSatisfaction"]) else None,
+    axis=1
+)
 
-**About the Roles:**
-- **County Planners** need localized, budget-justified recommendations.
-- **State Policy Analysts** want cross-county comparisons and infrastructure trends.
-- **Community Advocates** focus on equity gaps and local vulnerability hotspots.
-- **General Users** can explore national data with contextual support.
+# GeoJSON source
+geojson_url = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json"
 
-The app tailors narrative output and indicators based on these personas to make the tool accessible and action-oriented.
-    """)
+# App layout
+st.title("S.A.G.E. – Sustainable Aging Governance Engine")
+st.markdown("Simulating satisfaction improvement from targeted eldercare investment, driven by equity and need.")
 
-# County Explorer Page
-elif page == "County Explorer":
-    st.title("Explore County Vulnerability and Aging Data")
+st.markdown(f"**Currently displaying {len(filtered)} counties**.")
 
-    selected_state = st.selectbox("Select a State", sorted(df["State"].unique()))
-    filtered_df = df[df["State"] == selected_state]
+# Layout two maps side-by-side
+col1, col2 = st.columns(2)
 
-    selected_county = st.selectbox("Select a County", filtered_df["County"])
-    selected_row = filtered_df[filtered_df["County"] == selected_county].iloc[0]
+with col1:
+    st.subheader("🟠 Current Satisfaction (Before Investment)")
+    fig1 = px.choropleth(
+        filtered,
+        geojson=geojson_url,
+        locations="FIPS",
+        color="CurrentSatisfaction",
+        color_continuous_scale="Greens",
+        range_color=(0, 1),
+        scope="usa",
+        hover_data=["County", "State", "Tier", "ElderVulnerabilityIndex", "CurrentSatisfaction"]
+    )
+    fig1.update_layout(margin={"r":0, "t":0, "l":0, "b":0})
+    st.plotly_chart(fig1, use_container_width=True)
 
-    st.markdown(f"### {selected_county}, {selected_row['State']}")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("SVI", f"{selected_row['SVI']:.2f}")
-    col2.metric("Over 65 (%)", f"{selected_row['PopulationOver65']:.1f}%")
-    col3.metric("Infrastructure", f"{selected_row['InfrastructureScore']:.2f}")
-    col4.metric("Satisfaction", f"{selected_row['ElderSatisfaction']:.2f}")
+with col2:
+    st.subheader("🟢 Projected Satisfaction (After Investment)")
+    fig2 = px.choropleth(
+        filtered,
+        geojson=geojson_url,
+        locations="FIPS",
+        color="PredictedSatisfaction",
+        color_continuous_scale="Greens",
+        range_color=(0, 1),
+        scope="usa",
+        hover_data=["County", "State", "Tier", "ElderVulnerabilityIndex", "PredictedSatisfaction"]
+    )
+    fig2.update_layout(margin={"r":0, "t":0, "l":0, "b":0})
+    st.plotly_chart(fig2, use_container_width=True)
 
-    def recommend(row):
-        if row["SVI"] > 0.75 and row["InfrastructureScore"] < 0.5:
-            return "High Priority – Consider Immediate Investment"
-        elif row["SVI"] > 0.5:
-            return "Moderate Priority – Monitor and Prepare"
-        else:
-            return "Stable – Maintain Current Support"
+st.caption("Data: CDC SVI 2022 • Simulated by S.A.G.E. modeling logic")
 
-    st.markdown("### Recommendation")
-    st.success(recommend(selected_row))
-
-    if user_role == "County Planner":
-        st.markdown("#### Narrative Summary")
-        st.markdown(f"{selected_county} County faces moderate eldercare vulnerability with a {selected_row['SVI']:.2f} SVI and {selected_row['InfrastructureScore']:.2f} infrastructure readiness. Recommended priority: **{recommend(selected_row)}**")
-
-    st.markdown("### Top 10 Counties by Elder Vulnerability Index (Higher = More Vulnerable)")
-    top_10 = filtered_df.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
-    st.dataframe(top_10[["County", "SVI", "PopulationOver65", "ElderVulnerabilityIndex"]].reset_index(drop=True))
-
-# National Summary Page
-elif page == "National Summary":
-    st.title("National Summary of Eldercare Vulnerability")
-
-    st.markdown("#### Top 10 Most Vulnerable Counties Nationwide (Higher = More Urgent Need)")
-    top_counties = df.sort_values("ElderVulnerabilityIndex", ascending=False).head(10)
-    st.dataframe(top_counties[["County", "State", "SVI", "PopulationOver65", "ElderVulnerabilityIndex"]].reset_index(drop=True))
-
-    st.markdown("#### Top 10 High-Priority Counties (Based on Composite Ranking of SVI and Age 65%)")
-    top_priority = df.sort_values("CompositePriorityScore").head(10)
-    styled_df = top_priority[["County", "State", "SVI", "PopulationOver65", "InfrastructureScore", "CompositePriorityScore"]] \
-        .reset_index(drop=True) \
-        .style.apply(lambda x: ['background-color: #ffcccc' if x.name < 3 else '' for _ in x], axis=1)
-    st.dataframe(styled_df)
-
-    st.markdown("#### Top 10 States by Average Elder Vulnerability Index (Higher = More Vulnerable)")
-    state_avg = df.groupby("State")["ElderVulnerabilityIndex"].mean().sort_values(ascending=False).head(10)
-    st.dataframe(state_avg.reset_index().rename(columns={"ElderVulnerabilityIndex": "Avg Elder Vulnerability Index"}))
-
-    st.markdown("#### Visualization: Statewide Average Vulnerability")
-    fig, ax = plt.subplots(figsize=(10, 5))
-    state_avg.sort_values().plot(kind='barh', ax=ax, color='gray')
-    ax.set_xlabel("Average Elder Vulnerability Index")
-    ax.set_ylabel("State")
-    ax.set_title("Average Elder Vulnerability Index by State")
-    st.pyplot(fig)
-
-    st.markdown("#### Insights and Ideas for Further Analysis")
-    st.markdown("""
-    - Identify geographic clusters of high vulnerability
-    - Highlight states with high variability (some counties low, others extremely high)
-    - Compare average SVI to average infrastructure score per state
-    - Flag counties with high elder population but low infrastructure scores as under-resourced
-    - Visualize vulnerability vs satisfaction to identify underperformers and potential improvement targets
-    """)
-
-# Simulation Tool Placeholder
-elif page == "Simulation Tool (Coming Soon)":
-    st.title("Decision Simulation Tool")
-    st.info("This module will allow you to test investment scenarios and forecast the efficiency of resource allocation.")
-
-    st.markdown("""
-    ### Preview: Investment Impact Model
-    This tool will estimate the projected improvement in elder satisfaction given a proposed budget increase and existing infrastructure score.
-
-    We'll use a basic regression model trained on historical patterns (e.g., where increased spending led to higher satisfaction outcomes).
-
-    Core variables to include:
-    - Baseline elder satisfaction
-    - Current infrastructure score
-    - Proposed budget increase (% or $ per capita)
-    - Resulting predicted satisfaction score
-
-    The goal: simulate how much gain in satisfaction can be achieved per unit of investment in different counties — helping identify the most efficient allocations.
-
-    **Challenge:** Collecting outcome-linked satisfaction data is limited, and building a proxy model with credible assumptions is our current research focus.
-    """)
-
-# Feedback Page
-elif page == "Feedback":
-    st.title("We Value Your Feedback")
-    st.markdown("If you’re a local policymaker, health leader, or community advocate — we’d love your thoughts.")
-    with st.form("feedback_form"):
-        name = st.text_input("Your Name")
-        org = st.text_input("Organization")
-        role = st.text_input("Your Role")
-        feedback = st.text_area("What worked well? What could be improved?")
-        submitted = st.form_submit_button("Submit")
-        if submitted:
-            st.success("Thank you! Your feedback has been recorded.")
