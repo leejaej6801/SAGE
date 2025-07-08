@@ -39,9 +39,9 @@ geojson_url = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-
 # Page Navigation
 pages = [
     "🏠 Welcome",
+    "🩺 Healthcare Disparity Map",
     "📊 Vulnerability Index Map",
-    "📈 Satisfaction Simulation",
-    "🩺 Healthcare Disparity Map"
+    "📈 Satisfaction Simulation"
 ]
 page = st.sidebar.radio("Navigate", pages)
 
@@ -61,12 +61,39 @@ if page == "🏠 Welcome":
     The platform supports local governments, nonprofits, and policy teams to **prioritize regions** with the greatest need
     using unified and dynamic data.
     """)
-    try:
-        st.image("data/vulnerability_demo_image.png", use_container_width=True,
-                 caption="Regional Disparities in Eldercare Vulnerability (demo layout)")
-    except Exception:
-        st.warning("⚠️ Demo image not found. Please add 'data/vulnerability_demo_image.png'.")
     st.info("Use the sidebar to explore map types and investment simulations.")
+
+# -------------------- Healthcare Disparity Map --------------------
+elif page == "🩺 Healthcare Disparity Map":
+    st.title("🩺 Healthcare Disparity Map – Medicare/Medicaid Resource Gaps")
+    st.markdown("""
+    This map visualizes chronic condition costs and elder insurance gaps across counties. Layers include:
+    - **SVI composite index** (structural vulnerability)
+    - **Medicare & Medicaid costs** (AvgChronicCost)
+    - **Insurance coverage estimates**
+
+    These overlapping layers help reveal where high needs and low support intersect, guiding equity-driven investment.
+    """)
+
+    selected_states = st.sidebar.multiselect("Filter by State", sorted(disparity_df["ST_ABBR"].dropna().unique()))
+    disp_filtered = disparity_df.copy()
+    if selected_states:
+        disp_filtered = disp_filtered[disp_filtered["ST_ABBR"].isin(selected_states)]
+
+    layer = st.radio("Select Disparity Layer", ["AvgChronicCost", "UninsuredRate", "RPL_THEMES"])
+
+    fig = px.choropleth(
+        disp_filtered,
+        geojson=geojson_url,
+        locations="FIPS",
+        color=layer,
+        color_continuous_scale="Reds" if layer == "AvgChronicCost" else "Blues",
+        scope="usa",
+        hover_data=["COUNTY", "STATE", layer]
+    )
+    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption("Data: CMS Medicare & Medicaid, CDC SVI, U.S. Census")
 
 # -------------------- Vulnerability Index --------------------
 elif page == "📊 Vulnerability Index Map":
@@ -152,29 +179,5 @@ elif page == "📈 Satisfaction Simulation":
         st.plotly_chart(fig_after, use_container_width=True)
     st.caption("Projection model for demonstration purposes only.")
 
-# -------------------- Healthcare Disparity Map --------------------
-elif page == "🩺 Healthcare Disparity Map":
-    st.title("🩺 Healthcare Disparity Map – Medicare/Medicaid Resource Gaps")
-    st.markdown("""
-    This map visualizes average chronic condition costs among older adults across counties. Higher costs may indicate 
-    more severe chronic illness burdens or inefficient care delivery, particularly in high-SVI areas.
-    """)
-    selected_states = st.sidebar.multiselect("Filter by State", sorted(disparity_df["ST_ABBR"].dropna().unique()))
-    disp_filtered = disparity_df.copy()
-    if selected_states:
-        disp_filtered = disp_filtered[disp_filtered["ST_ABBR"].isin(selected_states)]
-    fig = px.choropleth(
-        disp_filtered,
-        geojson=geojson_url,
-        locations="FIPS",
-        color="AvgChronicCost",
-        color_continuous_scale="Reds",
-        scope="usa",
-        range_color=(disp_filtered["AvgChronicCost"].min(), disp_filtered["AvgChronicCost"].max()),
-        hover_data=["COUNTY", "STATE", "AvgChronicCost"]
-    )
-    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-    st.plotly_chart(fig, use_container_width=True)
-    st.caption("Data: CMS Medicare & Medicaid, CDC SVI")
 
 
