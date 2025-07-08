@@ -13,16 +13,24 @@ def load_data():
         lambda x: round(max(0.1, min(1.0, 1 - x)), 3) if pd.notna(x) else None
     )
 
-    # Replace with actual state names if available
-    df["StateName"] = df["State"]  # Can map FIPS to full names later
+    # Extract state FIPS and map to abbreviations
+    state_fips_to_abbr = {
+        "01": "AL", "02": "AK", "04": "AZ", "05": "AR", "06": "CA", "08": "CO",
+        "09": "CT", "10": "DE", "11": "DC", "12": "FL", "13": "GA", "15": "HI",
+        "16": "ID", "17": "IL", "18": "IN", "19": "IA", "20": "KS", "21": "KY",
+        "22": "LA", "23": "ME", "24": "MD", "25": "MA", "26": "MI", "27": "MN",
+        "28": "MS", "29": "MO", "30": "MT", "31": "NE", "32": "NV", "33": "NH",
+        "34": "NJ", "35": "NM", "36": "NY", "37": "NC", "38": "ND", "39": "OH",
+        "40": "OK", "41": "OR", "42": "PA", "44": "RI", "45": "SC", "46": "SD",
+        "47": "TN", "48": "TX", "49": "UT", "50": "VT", "51": "VA", "53": "WA",
+        "54": "WV", "55": "WI", "56": "WY"
+    }
+    df["StateFIPS"] = df["FIPS"].str[:2]
+    df["StateAbbr"] = df["StateFIPS"].map(state_fips_to_abbr)
     return df
 
 df = load_data()
-
-# GeoJSON URL for U.S. counties
 geojson_url = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json"
-
-# App config
 st.set_page_config(page_title="S.A.G.E. – Eldercare Simulation Tool", layout="wide")
 
 # Page selector
@@ -37,7 +45,7 @@ if page == "🏠 Welcome":
     st.markdown("""
     S.A.G.E. helps local governments, nonprofits, and policymakers understand where eldercare resources are most needed,
     and how investments could improve community satisfaction. It combines:
-    
+
     - **CDC Social Vulnerability Index (SVI)**
     - **U.S. Census data**
     - A synthetic satisfaction projection model
@@ -45,17 +53,19 @@ if page == "🏠 Welcome":
     The tool offers both a **vulnerability map** and a **satisfaction impact simulation** to guide resource allocation decisions.
     """)
 
-    st.image("data/vulnerability_demo_image.png", use_column_width=True,
-             caption="Regional Disparities in Eldercare Vulnerability (demo layout)")
+    try:
+        st.image("data/vulnerability_demo_image.png", use_container_width=True,
+                 caption="Regional Disparities in Eldercare Vulnerability (demo layout)")
+    except Exception:
+        st.warning("⚠️ Demo image not found. Please add 'data/vulnerability_demo_image.png'.")
 
-    st.info("Use the sidebar to explore by map type or simulation scenario.")
+    st.info("Use the sidebar to explore map types and investment simulations.")
 
 # -------------------- Vulnerability Map --------------------
 elif page == "📊 Vulnerability Index Map":
     st.title("📊 Eldercare Vulnerability Index (by County)")
 
-    # Filters
-    selected_states = st.sidebar.multiselect("Filter by State", sorted(df["StateName"].unique()))
+    selected_states = st.sidebar.multiselect("Filter by State", sorted(df["StateAbbr"].dropna().unique()))
     selected_tiers = st.sidebar.multiselect(
         "Filter by Tier",
         options=["Tier 1: Critical", "Tier 2: High", "Tier 3: Moderate", "Tier 4: Low", "No Data"],
@@ -64,11 +74,10 @@ elif page == "📊 Vulnerability Index Map":
 
     filtered_df = df.copy()
     if selected_states:
-        filtered_df = filtered_df[filtered_df["StateName"].isin(selected_states)]
+        filtered_df = filtered_df[filtered_df["StateAbbr"].isin(selected_states)]
     if selected_tiers:
         filtered_df = filtered_df[filtered_df["Tier"].isin(selected_tiers)]
 
-    # Map
     st.markdown(f"**Displaying {len(filtered_df)} counties.**")
     fig = px.choropleth(
         filtered_df,
@@ -78,18 +87,17 @@ elif page == "📊 Vulnerability Index Map":
         color_continuous_scale="OrRd",
         range_color=(0, 1),
         scope="usa",
-        hover_data=["County", "State", "Tier", "ElderVulnerabilityIndex"]
+        hover_data=["County", "StateAbbr", "Tier", "ElderVulnerabilityIndex"]
     )
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
     st.plotly_chart(fig, use_container_width=True)
-
-    st.caption("Data source: CDC SVI 2022 + U.S. Census (processed by S.A.G.E.)")
+    st.caption("Data: CDC SVI 2022 + U.S. Census (processed by S.A.G.E.)")
 
 # -------------------- Satisfaction Simulation --------------------
 elif page == "📈 Satisfaction Simulation":
     st.title("📈 Satisfaction Simulation – Investment Impact by County")
 
-    selected_states = st.sidebar.multiselect("Filter by State", sorted(df["StateName"].unique()))
+    selected_states = st.sidebar.multiselect("Filter by State", sorted(df["StateAbbr"].dropna().unique()))
     selected_tiers = st.sidebar.multiselect(
         "Filter by Tier",
         options=["Tier 1: Critical", "Tier 2: High", "Tier 3: Moderate", "Tier 4: Low", "No Data"],
@@ -104,7 +112,7 @@ elif page == "📈 Satisfaction Simulation":
 
     sim_df = df.copy()
     if selected_states:
-        sim_df = sim_df[sim_df["StateName"].isin(selected_states)]
+        sim_df = sim_df[sim_df["StateAbbr"].isin(selected_states)]
     if selected_tiers:
         sim_df = sim_df[sim_df["Tier"].isin(selected_tiers)]
 
@@ -126,7 +134,7 @@ elif page == "📈 Satisfaction Simulation":
             color_continuous_scale="Greens",
             range_color=(0, 1),
             scope="usa",
-            hover_data=["County", "State", "Tier", "CurrentSatisfaction"]
+            hover_data=["County", "StateAbbr", "Tier", "CurrentSatisfaction"]
         )
         fig_before.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
         st.plotly_chart(fig_before, use_container_width=True)
@@ -141,11 +149,11 @@ elif page == "📈 Satisfaction Simulation":
             color_continuous_scale="Greens",
             range_color=(0, 1),
             scope="usa",
-            hover_data=["County", "State", "Tier", "PredictedSatisfaction"]
+            hover_data=["County", "StateAbbr", "Tier", "PredictedSatisfaction"]
         )
         fig_after.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
         st.plotly_chart(fig_after, use_container_width=True)
 
-    st.caption("Projection model for demonstration only. Scores simulate directional improvement.")
+    st.caption("Projection model for demonstration purposes only.")
 
 
