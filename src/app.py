@@ -67,33 +67,45 @@ if page == "🏠 Welcome":
 elif page == "🩺 Healthcare Disparity Map":
     st.title("🩺 Healthcare Disparity Map – Medicare/Medicaid Resource Gaps")
     st.markdown("""
-    This map visualizes chronic condition costs and elder insurance gaps across counties. Layers include:
-    - **SVI composite index** (structural vulnerability)
-    - **Medicare & Medicaid costs** (AvgChronicCost)
-    - **Insurance coverage estimates**
+    This map visualizes key eldercare and insurance-related disparities across counties using:
 
-    These overlapping layers help reveal where high needs and low support intersect, guiding equity-driven investment.
+    - **Medicare/Medicaid average chronic costs**
+    - **Eldercare population rate (U.S. Census)**
+    - **Uninsured rates or insurance coverage (proxy)**
+
+    Use the filters and layer selector to examine support gaps from multiple dimensions.
     """)
 
     selected_states = st.sidebar.multiselect("Filter by State", sorted(disparity_df["ST_ABBR"].dropna().unique()))
+    layer_option = st.sidebar.radio("Select Data Layer", [
+        "AvgChronicCost (Medicare/Medicaid)",
+        "EldercareRate (Census)",
+        "UninsuredRate (Coverage)"
+    ])
+
     disp_filtered = disparity_df.copy()
     if selected_states:
         disp_filtered = disp_filtered[disp_filtered["ST_ABBR"].isin(selected_states)]
 
-    layer = st.radio("Select Disparity Layer", ["AvgChronicCost", "UninsuredRate", "RPL_THEMES"])
+    layer_column = {
+        "AvgChronicCost (Medicare/Medicaid)": "AvgChronicCost",
+        "EldercareRate (Census)": "EldercareRate",
+        "UninsuredRate (Coverage)": "UninsuredRate"
+    }[layer_option]
 
     fig = px.choropleth(
         disp_filtered,
         geojson=geojson_url,
         locations="FIPS",
-        color=layer,
-        color_continuous_scale="Reds" if layer == "AvgChronicCost" else "Blues",
+        color=layer_column,
+        color_continuous_scale="Reds" if "Cost" in layer_column else "Blues",
         scope="usa",
-        hover_data=["COUNTY", "STATE", layer]
+        range_color=(disp_filtered[layer_column].min(), disp_filtered[layer_column].max()),
+        hover_data=["COUNTY", "STATE", layer_column]
     )
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
     st.plotly_chart(fig, use_container_width=True)
-    st.caption("Data: CMS Medicare & Medicaid, CDC SVI, U.S. Census")
+    st.caption("Data: CMS, U.S. Census, CDC SVI")
 
 # -------------------- Vulnerability Index --------------------
 elif page == "📊 Vulnerability Index Map":
