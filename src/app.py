@@ -95,7 +95,7 @@ elif page == "🩺 Healthcare Disparity Map":
     }
     layer_column = layer_mapping.get(layer_option)
 
-    if layer_column and layer_column in disp_filtered.columns:
+    if layer_column in disp_filtered.columns:
         fig = px.choropleth(
             disp_filtered,
             geojson=geojson_url,
@@ -109,7 +109,7 @@ elif page == "🩺 Healthcare Disparity Map":
         fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.error("Selected data layer not found in the dataset.")
+        st.error(f"Data column '{layer_column}' not found in dataset. Please check column names.")
 
     st.caption("Data: CMS, U.S. Census, CDC SVI")
 
