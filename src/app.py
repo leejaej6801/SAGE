@@ -25,11 +25,21 @@ def load_data():
     df["StateAbbr"] = df["StateFIPS"].map(state_fips_to_abbr)
     return df
 
-# Load disparity dataset
+# Load disparity dataset with column renaming
 @st.cache_data
 def load_disparity_data():
     df = pd.read_csv("data/Unified_SAGE_DisparityDataset.csv", dtype={"FIPS": str})
     df["FIPS"] = df["FIPS"].str.zfill(5)
+
+    # Rename common columns if found
+    column_renames = {
+        "ElderlyRate": "EldercareRate",
+        "ElderPopulationRate": "EldercareRate",
+        "PctUninsured": "UninsuredRate",
+        "Uninsured": "UninsuredRate"
+    }
+    df.rename(columns={k: v for k, v in column_renames.items() if k in df.columns}, inplace=True)
+
     return df
 
 df = load_data()
@@ -87,7 +97,6 @@ elif page == "🩺 Healthcare Disparity Map":
     if selected_states:
         disp_filtered = disp_filtered[disp_filtered["ST_ABBR"].isin(selected_states)]
 
-    # Safely map the selected layer option to column
     layer_mapping = {
         "AvgChronicCost (Medicare/Medicaid)": "AvgChronicCost",
         "EldercareRate (Census)": "EldercareRate",
@@ -196,5 +205,3 @@ elif page == "📈 Satisfaction Simulation":
         fig_after.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
         st.plotly_chart(fig_after, use_container_width=True)
     st.caption("Projection model for demonstration purposes only.")
-
-
