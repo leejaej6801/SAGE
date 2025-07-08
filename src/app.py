@@ -25,7 +25,7 @@ def load_data():
     df["StateAbbr"] = df["StateFIPS"].map(state_fips_to_abbr)
     return df
 
-# Load healthcare disparity data (merged SVI + Medicare/Medicaid cost)
+# Load disparity dataset
 @st.cache_data
 def load_disparity_data():
     df = pd.read_csv("data/Unified_SAGE_DisparityDataset.csv", dtype={"FIPS": str})
@@ -45,11 +45,10 @@ pages = [
 ]
 page = st.sidebar.radio("Navigate", pages)
 
-# -------------------- 🏠 Welcome --------------------
+# -------------------- Welcome --------------------
 if page == "🏠 Welcome":
     st.title("S.A.G.E. – Sustainable Aging Governance Engine")
     st.subheader("Equity-focused Decision Support for Eldercare")
-
     st.markdown("""
     S.A.G.E. is an equity-first decision support tool that helps identify and simulate how public health investments
     can improve eldercare across the United States. It combines:
@@ -62,16 +61,14 @@ if page == "🏠 Welcome":
     The platform supports local governments, nonprofits, and policy teams to **prioritize regions** with the greatest need
     using unified and dynamic data.
     """)
-
     try:
         st.image("data/vulnerability_demo_image.png", use_container_width=True,
                  caption="Regional Disparities in Eldercare Vulnerability (demo layout)")
     except Exception:
         st.warning("⚠️ Demo image not found. Please add 'data/vulnerability_demo_image.png'.")
-
     st.info("Use the sidebar to explore map types and investment simulations.")
 
-# -------------------- 📊 Vulnerability Index Map --------------------
+# -------------------- Vulnerability Index --------------------
 elif page == "📊 Vulnerability Index Map":
     st.title("📊 Eldercare Vulnerability Index (by County)")
     selected_states = st.sidebar.multiselect("Filter by State", sorted(df["StateAbbr"].dropna().unique()))
@@ -80,13 +77,11 @@ elif page == "📊 Vulnerability Index Map":
         options=["Tier 1: Critical", "Tier 2: High", "Tier 3: Moderate", "Tier 4: Low", "No Data"],
         default=["Tier 1: Critical", "Tier 2: High", "Tier 3: Moderate", "Tier 4: Low"]
     )
-
     filtered_df = df.copy()
     if selected_states:
         filtered_df = filtered_df[filtered_df["StateAbbr"].isin(selected_states)]
     if selected_tiers:
         filtered_df = filtered_df[filtered_df["Tier"].isin(selected_tiers)]
-
     st.markdown(f"**Displaying {len(filtered_df)} counties.**")
     fig = px.choropleth(
         filtered_df,
@@ -102,7 +97,7 @@ elif page == "📊 Vulnerability Index Map":
     st.plotly_chart(fig, use_container_width=True)
     st.caption("Data: CDC SVI 2022 + U.S. Census (processed by S.A.G.E.)")
 
-# -------------------- 📈 Satisfaction Simulation --------------------
+# -------------------- Satisfaction Simulation --------------------
 elif page == "📈 Satisfaction Simulation":
     st.title("📈 Satisfaction Simulation – Investment Impact by County")
     selected_states = st.sidebar.multiselect("Filter by State", sorted(df["StateAbbr"].dropna().unique()))
@@ -111,27 +106,22 @@ elif page == "📈 Satisfaction Simulation":
         options=["Tier 1: Critical", "Tier 2: High", "Tier 3: Moderate", "Tier 4: Low", "No Data"],
         default=["Tier 1: Critical", "Tier 2: High", "Tier 3: Moderate", "Tier 4: Low"]
     )
-
     investment_factor = st.sidebar.slider(
         "Investment Effectiveness",
         min_value=0.0, max_value=1.0, value=0.2, step=0.05,
         help="Higher values simulate stronger satisfaction improvements for vulnerable counties."
     )
-
     sim_df = df.copy()
     if selected_states:
         sim_df = sim_df[sim_df["StateAbbr"].isin(selected_states)]
     if selected_tiers:
         sim_df = sim_df[sim_df["Tier"].isin(selected_tiers)]
-
     sim_df["PredictedSatisfaction"] = sim_df.apply(
         lambda row: round(min(1.0, row["CurrentSatisfaction"] + row["ElderVulnerabilityIndex"] * investment_factor), 3)
         if pd.notna(row["CurrentSatisfaction"]) else None,
         axis=1
     )
-
     col1, col2 = st.columns(2)
-
     with col1:
         st.subheader("🟠 Current Satisfaction")
         fig_before = px.choropleth(
@@ -146,7 +136,6 @@ elif page == "📈 Satisfaction Simulation":
         )
         fig_before.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
         st.plotly_chart(fig_before, use_container_width=True)
-
     with col2:
         st.subheader("🟢 Projected Satisfaction (After Investment)")
         fig_after = px.choropleth(
@@ -161,41 +150,31 @@ elif page == "📈 Satisfaction Simulation":
         )
         fig_after.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
         st.plotly_chart(fig_after, use_container_width=True)
-
     st.caption("Projection model for demonstration purposes only.")
 
-# -------------------- 🩺 Healthcare Disparity Map --------------------
+# -------------------- Healthcare Disparity Map --------------------
 elif page == "🩺 Healthcare Disparity Map":
     st.title("🩺 Healthcare Disparity Map – Medicare/Medicaid Resource Gaps")
-
     st.markdown("""
-    This page visualizes county-level disparities in **average Medicare & Medicaid principal costs**
-    for **dual and non-dual eligible older adults** with chronic conditions like **Acute Myocardial Infarction**.
-
-    These disparities help identify systemic service gaps and highlight where vulnerable populations
-    face compounded medical and socioeconomic risk.
+    This map visualizes average chronic condition costs among older adults across counties. Higher costs may indicate 
+    more severe chronic illness burdens or inefficient care delivery, particularly in high-SVI areas.
     """)
-
-    states = sorted(disparity_df["STATE"].dropna().unique())
-    selected_states = st.sidebar.multiselect("Filter by State", states)
-
-    filtered = disparity_df.copy()
+    selected_states = st.sidebar.multiselect("Filter by State", sorted(disparity_df["ST_ABBR"].dropna().unique()))
+    disp_filtered = disparity_df.copy()
     if selected_states:
-        filtered = filtered[filtered["STATE"].isin(selected_states)]
-
+        disp_filtered = disp_filtered[disp_filtered["ST_ABBR"].isin(selected_states)]
     fig = px.choropleth(
-        filtered,
+        disp_filtered,
         geojson=geojson_url,
         locations="FIPS",
         color="AvgChronicCost",
         color_continuous_scale="Reds",
-        range_color=(filtered["AvgChronicCost"].min(), filtered["AvgChronicCost"].max()),
         scope="usa",
-        hover_data=["FIPS", "COUNTY", "STATE", "AvgChronicCost", "RPL_THEMES"]
+        range_color=(disp_filtered["AvgChronicCost"].min(), disp_filtered["AvgChronicCost"].max()),
+        hover_data=["COUNTY", "STATE", "AvgChronicCost"]
     )
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
     st.plotly_chart(fig, use_container_width=True)
-
-    st.caption("Data: CMS Chronic Conditions, CDC SVI, and U.S. Census")
+    st.caption("Data: CMS Medicare & Medicaid, CDC SVI")
 
 
