@@ -87,24 +87,30 @@ elif page == "🩺 Healthcare Disparity Map":
     if selected_states:
         disp_filtered = disp_filtered[disp_filtered["ST_ABBR"].isin(selected_states)]
 
-    layer_column = {
+    # Safely map the selected layer option to column
+    layer_mapping = {
         "AvgChronicCost (Medicare/Medicaid)": "AvgChronicCost",
         "EldercareRate (Census)": "EldercareRate",
         "UninsuredRate (Coverage)": "UninsuredRate"
-    }[layer_option]
+    }
+    layer_column = layer_mapping.get(layer_option)
 
-    fig = px.choropleth(
-        disp_filtered,
-        geojson=geojson_url,
-        locations="FIPS",
-        color=layer_column,
-        color_continuous_scale="Reds" if "Cost" in layer_column else "Blues",
-        scope="usa",
-        range_color=(disp_filtered[layer_column].min(), disp_filtered[layer_column].max()),
-        hover_data=["COUNTY", "STATE", layer_column]
-    )
-    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-    st.plotly_chart(fig, use_container_width=True)
+    if layer_column and layer_column in disp_filtered.columns:
+        fig = px.choropleth(
+            disp_filtered,
+            geojson=geojson_url,
+            locations="FIPS",
+            color=layer_column,
+            color_continuous_scale="Reds" if "Cost" in layer_column else "Blues",
+            scope="usa",
+            range_color=(disp_filtered[layer_column].min(), disp_filtered[layer_column].max()),
+            hover_data=["COUNTY", "STATE", layer_column]
+        )
+        fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.error("Selected data layer not found in the dataset.")
+
     st.caption("Data: CMS, U.S. Census, CDC SVI")
 
 # -------------------- Vulnerability Index --------------------
@@ -190,6 +196,5 @@ elif page == "📈 Satisfaction Simulation":
         fig_after.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
         st.plotly_chart(fig_after, use_container_width=True)
     st.caption("Projection model for demonstration purposes only.")
-
 
 
