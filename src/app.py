@@ -2,55 +2,65 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Load dataset with caching
+st.set_page_config(page_title="S.A.G.E. – Eldercare Simulation Tool", layout="wide")
+
+# Load main dataset
 @st.cache_data
 def load_data():
     df = pd.read_csv("data/Eldercare_Tiers_2022_FullCountyCoverage.csv")
     df["FIPS"] = df["FIPS"].astype(str).str.zfill(5)
-
-    # Simulate satisfaction score (inversely proportional to vulnerability)
     df["CurrentSatisfaction"] = df["ElderVulnerabilityIndex"].apply(
         lambda x: round(max(0.1, min(1.0, 1 - x)), 3) if pd.notna(x) else None
     )
-
-    # Extract state FIPS and map to abbreviations
     state_fips_to_abbr = {
-        "01": "AL", "02": "AK", "04": "AZ", "05": "AR", "06": "CA", "08": "CO",
-        "09": "CT", "10": "DE", "11": "DC", "12": "FL", "13": "GA", "15": "HI",
-        "16": "ID", "17": "IL", "18": "IN", "19": "IA", "20": "KS", "21": "KY",
-        "22": "LA", "23": "ME", "24": "MD", "25": "MA", "26": "MI", "27": "MN",
-        "28": "MS", "29": "MO", "30": "MT", "31": "NE", "32": "NV", "33": "NH",
-        "34": "NJ", "35": "NM", "36": "NY", "37": "NC", "38": "ND", "39": "OH",
-        "40": "OK", "41": "OR", "42": "PA", "44": "RI", "45": "SC", "46": "SD",
-        "47": "TN", "48": "TX", "49": "UT", "50": "VT", "51": "VA", "53": "WA",
+        "01": "AL", "02": "AK", "04": "AZ", "05": "AR", "06": "CA", "08": "CO", "09": "CT", "10": "DE",
+        "11": "DC", "12": "FL", "13": "GA", "15": "HI", "16": "ID", "17": "IL", "18": "IN", "19": "IA",
+        "20": "KS", "21": "KY", "22": "LA", "23": "ME", "24": "MD", "25": "MA", "26": "MI", "27": "MN",
+        "28": "MS", "29": "MO", "30": "MT", "31": "NE", "32": "NV", "33": "NH", "34": "NJ", "35": "NM",
+        "36": "NY", "37": "NC", "38": "ND", "39": "OH", "40": "OK", "41": "OR", "42": "PA", "44": "RI",
+        "45": "SC", "46": "SD", "47": "TN", "48": "TX", "49": "UT", "50": "VT", "51": "VA", "53": "WA",
         "54": "WV", "55": "WI", "56": "WY"
     }
     df["StateFIPS"] = df["FIPS"].str[:2]
     df["StateAbbr"] = df["StateFIPS"].map(state_fips_to_abbr)
     return df
 
-df = load_data()
-geojson_url = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json"
-st.set_page_config(page_title="S.A.G.E. – Eldercare Simulation Tool", layout="wide")
+# Load healthcare disparity data (merged SVI + Medicare/Medicaid cost)
+@st.cache_data
+def load_disparity_data():
+    df = pd.read_csv("data/Unified_SAGE_DisparityDataset.csv", dtype={"FIPS": str})
+    df["FIPS"] = df["FIPS"].str.zfill(5)
+    return df
 
-# Page selector
-pages = ["🏠 Welcome", "📊 Vulnerability Index Map", "📈 Satisfaction Simulation"]
+df = load_data()
+disparity_df = load_disparity_data()
+geojson_url = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json"
+
+# Page Navigation
+pages = [
+    "🏠 Welcome",
+    "📊 Vulnerability Index Map",
+    "📈 Satisfaction Simulation",
+    "🩺 Healthcare Disparity Map"
+]
 page = st.sidebar.radio("Navigate", pages)
 
-# -------------------- Welcome Page --------------------
+# -------------------- 🏠 Welcome --------------------
 if page == "🏠 Welcome":
     st.title("S.A.G.E. – Sustainable Aging Governance Engine")
     st.subheader("Equity-focused Decision Support for Eldercare")
 
     st.markdown("""
-    S.A.G.E. helps local governments, nonprofits, and policymakers understand where eldercare resources are most needed,
-    and how investments could improve community satisfaction. It combines:
+    S.A.G.E. is an equity-first decision support tool that helps identify and simulate how public health investments
+    can improve eldercare across the United States. It combines:
 
     - **CDC Social Vulnerability Index (SVI)**
-    - **U.S. Census data**
-    - A synthetic satisfaction projection model
+    - **U.S. Census demographic and aging data**
+    - **Medicare & Medicaid chronic care disparity data**
+    - A **synthetic satisfaction projection model**
 
-    The tool offers both a **vulnerability map** and a **satisfaction impact simulation** to guide resource allocation decisions.
+    The platform supports local governments, nonprofits, and policy teams to **prioritize regions** with the greatest need
+    using unified and dynamic data.
     """)
 
     try:
@@ -61,10 +71,9 @@ if page == "🏠 Welcome":
 
     st.info("Use the sidebar to explore map types and investment simulations.")
 
-# -------------------- Vulnerability Map --------------------
+# -------------------- 📊 Vulnerability Index Map --------------------
 elif page == "📊 Vulnerability Index Map":
     st.title("📊 Eldercare Vulnerability Index (by County)")
-
     selected_states = st.sidebar.multiselect("Filter by State", sorted(df["StateAbbr"].dropna().unique()))
     selected_tiers = st.sidebar.multiselect(
         "Filter by Tier",
@@ -93,10 +102,9 @@ elif page == "📊 Vulnerability Index Map":
     st.plotly_chart(fig, use_container_width=True)
     st.caption("Data: CDC SVI 2022 + U.S. Census (processed by S.A.G.E.)")
 
-# -------------------- Satisfaction Simulation --------------------
+# -------------------- 📈 Satisfaction Simulation --------------------
 elif page == "📈 Satisfaction Simulation":
     st.title("📈 Satisfaction Simulation – Investment Impact by County")
-
     selected_states = st.sidebar.multiselect("Filter by State", sorted(df["StateAbbr"].dropna().unique()))
     selected_tiers = st.sidebar.multiselect(
         "Filter by Tier",
@@ -155,5 +163,40 @@ elif page == "📈 Satisfaction Simulation":
         st.plotly_chart(fig_after, use_container_width=True)
 
     st.caption("Projection model for demonstration purposes only.")
+
+# -------------------- 🩺 Healthcare Disparity Map --------------------
+elif page == "🩺 Healthcare Disparity Map":
+    st.title("🩺 Healthcare Disparity Map – Medicare/Medicaid Resource Gaps")
+
+    st.markdown("""
+    This page visualizes county-level disparities in **average Medicare & Medicaid principal costs**
+    for **dual and non-dual eligible older adults** with chronic conditions like **Acute Myocardial Infarction**.
+
+    These disparities help identify systemic service gaps and highlight where vulnerable populations
+    face compounded medical and socioeconomic risk.
+    """)
+
+    states = sorted(disparity_df["STATE"].dropna().unique())
+    selected_states = st.sidebar.multiselect("Filter by State", states)
+
+    filtered = disparity_df.copy()
+    if selected_states:
+        filtered = filtered[filtered["STATE"].isin(selected_states)]
+
+    fig = px.choropleth(
+        filtered,
+        geojson=geojson_url,
+        locations="FIPS",
+        color="AvgChronicCost",
+        color_continuous_scale="Reds",
+        range_color=(filtered["AvgChronicCost"].min(), filtered["AvgChronicCost"].max()),
+        scope="usa",
+        hover_data=["FIPS", "COUNTY", "STATE", "AvgChronicCost", "RPL_THEMES"]
+    )
+    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.caption("Data: CMS Chronic Conditions, CDC SVI, and U.S. Census")
+
 
 
