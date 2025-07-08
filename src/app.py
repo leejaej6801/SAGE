@@ -25,23 +25,29 @@ def load_data():
     df["StateAbbr"] = df["StateFIPS"].map(state_fips_to_abbr)
     return df
 
-# Load disparity dataset with column renaming
+# Load disparity dataset with enforced column names
 @st.cache_data
 def load_disparity_data():
     df = pd.read_csv("data/Unified_SAGE_DisparityDataset.csv", dtype={"FIPS": str})
     df["FIPS"] = df["FIPS"].str.zfill(5)
 
-    # Rename common columns if found
+    # Standardize column names
+    df.columns = [
+        "FIPS" if c == "fips" else c.strip().replace("%", "Pct").replace(" ", "")
+        for c in df.columns
+    ]
+
     column_renames = {
         "ElderlyRate": "EldercareRate",
         "ElderPopulationRate": "EldercareRate",
         "PctUninsured": "UninsuredRate",
-        "Uninsured": "UninsuredRate"
+        "Uninsured": "UninsuredRate",
+        "RateUninsured": "UninsuredRate"
     }
     df.rename(columns={k: v for k, v in column_renames.items() if k in df.columns}, inplace=True)
-
     return df
 
+# Load data
 df = load_data()
 disparity_df = load_disparity_data()
 geojson_url = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json"
